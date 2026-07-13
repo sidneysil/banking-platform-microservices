@@ -1,0 +1,22 @@
+spring:
+  application.name: banking-ledger
+  datasource:
+    url: jdbc:postgresql://localhost:5433/banking
+    username: banking
+    password: banking
+  jpa:
+    open-in-view: false
+    hibernate.ddl-auto: validate
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: audit-service
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+    listener.ack-mode: record
+management.endpoints.web.exposure.include: health,info,metrics,prometheus
+banking:
+  kafka.topic: banking.account-events.v1
+  jobs.enabled: ${BANKING_JOBS_ENABLED:true}
+  interest.daily-rate: 0.0001
+  fee.monthly-amount: 19.90
