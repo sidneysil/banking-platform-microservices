@@ -11,6 +11,20 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+
+  auth-postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: authentication
+      POSTGRES_USER: auth_user
+      POSTGRES_PASSWORD: auth_password
+    ports: ["5434:5432"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U auth_user -d authentication"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
   kafka:
     image: apache/kafka:latest
     ports: ["9092:9092"]
@@ -26,6 +40,7 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
     ports: ["8081:8080"]
