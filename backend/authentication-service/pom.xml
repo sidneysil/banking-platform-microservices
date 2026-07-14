@@ -94,7 +94,12 @@
 			<artifactId>spring-boot-starter-webmvc-test</artifactId>
 			<scope>test</scope>
 		</dependency>
+		<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-security-oauth2-resource-server</artifactId>
+</dependency>
 	</dependencies>
+	
 
 	<build>
     <plugins>
@@ -103,6 +108,7 @@
             <artifactId>maven-jar-plugin</artifactId>
             <version>3.4.2</version>
         </plugin>
+        
 
         <plugin>
             <groupId>org.springframework.boot</groupId>
