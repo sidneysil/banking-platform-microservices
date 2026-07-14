@@ -1,6 +1,7 @@
 package com.sidney.banking.auth.service;
 
 import java.util.Locale;
+import java.util.UUID;
 
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -48,7 +49,9 @@ public class AuthService {
                 UserRole.CUSTOMER
         );
 
-        return UserResponse.from(userRepository.save(user));
+        User savedUser = userRepository.save(user);
+
+        return UserResponse.from(savedUser);
     }
 
     @Transactional(readOnly = true)
@@ -58,7 +61,9 @@ public class AuthService {
         User user = userRepository
                 .findByEmailIgnoreCase(normalizedEmail)
                 .orElseThrow(() ->
-                        new BadCredentialsException("E-mail ou senha inválidos")
+                        new BadCredentialsException(
+                                "E-mail ou senha inválidos"
+                        )
                 );
 
         boolean validPassword = passwordEncoder.matches(
@@ -80,6 +85,31 @@ public class AuthService {
                 tokenService.getExpirationSeconds(),
                 UserResponse.from(user)
         );
+    }
+
+    @Transactional(readOnly = true)
+    public UserResponse getAuthenticatedUser(String subject) {
+        UUID userId;
+
+        try {
+            userId = UUID.fromString(subject);
+        } catch (IllegalArgumentException exception) {
+            throw new BadCredentialsException("Token inválido");
+        }
+
+        User user = userRepository
+                .findById(userId)
+                .orElseThrow(() ->
+                        new BadCredentialsException(
+                                "Usuário não encontrado"
+                        )
+                );
+
+        if (user.getStatus() != UserStatus.ACTIVE) {
+            throw new BadCredentialsException("Usuário inativo");
+        }
+
+        return UserResponse.from(user);
     }
 
     private String normalizeEmail(String email) {
