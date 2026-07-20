@@ -1,5 +1,7 @@
 package com.sidney.banking.auth.service;
 
+import java.util.Comparator;
+import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 
@@ -34,12 +36,20 @@ public class AuthService {
         this.tokenService = tokenService;
     }
 
+    /**
+     * Cadastra um novo cliente.
+     *
+     * A senha é transformada em hash pelo BCrypt antes de ser
+     * persistida no banco de dados.
+     */
     @Transactional
     public UserResponse register(RegisterRequest request) {
         String normalizedEmail = normalizeEmail(request.email());
 
         if (userRepository.existsByEmailIgnoreCase(normalizedEmail)) {
-            throw new IllegalArgumentException("E-mail já cadastrado");
+            throw new IllegalArgumentException(
+                    "E-mail já cadastrado"
+            );
         }
 
         User user = new User(
@@ -54,6 +64,12 @@ public class AuthService {
         return UserResponse.from(savedUser);
     }
 
+    /**
+     * Autentica o usuário e gera um JWT.
+     *
+     * A mensagem de erro é propositalmente genérica para não revelar
+     * se o e-mail existe no banco de dados.
+     */
     @Transactional(readOnly = true)
     public LoginResponse login(LoginRequest request) {
         String normalizedEmail = normalizeEmail(request.email());
@@ -87,15 +103,15 @@ public class AuthService {
         );
     }
 
+    /**
+     * Retorna o usuário representado pelo subject do JWT.
+     *
+     * Mesmo que o token seja válido, o usuário é consultado novamente
+     * para verificar se ainda existe e continua ativo.
+     */
     @Transactional(readOnly = true)
     public UserResponse getAuthenticatedUser(String subject) {
-        UUID userId;
-
-        try {
-            userId = UUID.fromString(subject);
-        } catch (IllegalArgumentException exception) {
-            throw new BadCredentialsException("Token inválido");
-        }
+        UUID userId = parseUserId(subject);
 
         User user = userRepository
                 .findById(userId)
@@ -106,12 +122,51 @@ public class AuthService {
                 );
 
         if (user.getStatus() != UserStatus.ACTIVE) {
-            throw new BadCredentialsException("Usuário inativo");
+            throw new BadCredentialsException(
+                    "Usuário inativo"
+            );
         }
 
         return UserResponse.from(user);
     }
 
+    /**
+     * Lista os usuários cadastrados.
+     *
+     * O controller administrativo protege essa operação com:
+     * @PreAuthorize("hasRole('ADMIN')")
+     */
+    @Transactional(readOnly = true)
+    public List<UserResponse> listUsers() {
+        return userRepository
+                .findAll()
+                .stream()
+                .sorted(
+                        Comparator.comparing(
+                                User::getCreatedAt
+                        )
+                )
+                .map(UserResponse::from)
+                .toList();
+    }
+
+    /**
+     * Converte o subject do JWT para UUID.
+     */
+    private UUID parseUserId(String subject) {
+        try {
+            return UUID.fromString(subject);
+        } catch (IllegalArgumentException exception) {
+            throw new BadCredentialsException(
+                    "Token inválido"
+            );
+        }
+    }
+
+    /**
+     * Padroniza o e-mail para evitar duplicidade causada por
+     * letras maiúsculas ou espaços.
+     */
     private String normalizeEmail(String email) {
         return email
                 .trim()
