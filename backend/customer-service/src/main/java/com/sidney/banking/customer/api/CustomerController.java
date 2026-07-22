@@ -1,7 +1,6 @@
 package com.sidney.banking.customer.api;
 
 import java.net.URI;
-import java.util.UUID;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -12,6 +11,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.sidney.banking.customer.security.AuthenticatedUser;
+import com.sidney.banking.customer.security.AuthenticatedUserProvider;
 import com.sidney.banking.customer.service.CustomerService;
 
 import jakarta.validation.Valid;
@@ -21,9 +22,14 @@ import jakarta.validation.Valid;
 public class CustomerController {
 
     private final CustomerService customerService;
+    private final AuthenticatedUserProvider authenticatedUserProvider;
 
-    public CustomerController(CustomerService customerService) {
+    public CustomerController(
+            CustomerService customerService,
+            AuthenticatedUserProvider authenticatedUserProvider
+    ) {
         this.customerService = customerService;
+        this.authenticatedUserProvider = authenticatedUserProvider;
     }
 
     @PostMapping("/me")
@@ -31,10 +37,14 @@ public class CustomerController {
             @AuthenticationPrincipal Jwt jwt,
             @Valid @RequestBody CreateCustomerRequest request
     ) {
-        UUID userId = UUID.fromString(jwt.getSubject());
 
-        CustomerResponse response =
-                customerService.create(userId, request);
+        AuthenticatedUser authenticatedUser =
+                authenticatedUserProvider.from(jwt);
+
+        CustomerResponse response = customerService.create(
+                authenticatedUser.userId(),
+                request
+        );
 
         return ResponseEntity
                 .created(URI.create("/api/customers/me"))
@@ -45,10 +55,14 @@ public class CustomerController {
     public ResponseEntity<CustomerResponse> me(
             @AuthenticationPrincipal Jwt jwt
     ) {
-        UUID userId = UUID.fromString(jwt.getSubject());
+
+        AuthenticatedUser authenticatedUser =
+                authenticatedUserProvider.from(jwt);
 
         CustomerResponse response =
-                customerService.findByUserId(userId);
+                customerService.findByUserId(
+                        authenticatedUser.userId()
+                );
 
         return ResponseEntity.ok(response);
     }
