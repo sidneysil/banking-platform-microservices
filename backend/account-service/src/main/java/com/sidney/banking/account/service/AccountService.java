@@ -9,6 +9,8 @@ import org.springframework.transaction.annotation.Transactional;
 import com.sidney.banking.account.api.AccountResponse;
 import com.sidney.banking.account.api.CreateAccountRequest;
 import com.sidney.banking.account.domain.Account;
+import com.sidney.banking.account.event.AccountCreatedEvent;
+import com.sidney.banking.account.event.AccountEventPublisher;
 import com.sidney.banking.account.repository.AccountRepository;
 
 @Service
@@ -18,13 +20,16 @@ public class AccountService {
 
     private final AccountRepository accountRepository;
     private final AccountNumberGenerator accountNumberGenerator;
+    private final AccountEventPublisher accountEventPublisher;
 
     public AccountService(
             AccountRepository accountRepository,
-            AccountNumberGenerator accountNumberGenerator
+            AccountNumberGenerator accountNumberGenerator,
+            AccountEventPublisher accountEventPublisher
     ) {
         this.accountRepository = accountRepository;
         this.accountNumberGenerator = accountNumberGenerator;
+        this.accountEventPublisher = accountEventPublisher;
     }
 
     @Transactional
@@ -55,6 +60,16 @@ public class AccountService {
         );
 
         Account savedAccount = accountRepository.save(account);
+
+        AccountCreatedEvent event = new AccountCreatedEvent(
+                UUID.randomUUID(),
+                savedAccount.getId(),
+                savedAccount.getCustomerId(),
+                savedAccount.getType().name(),
+                savedAccount.getCreatedAt()
+        );
+
+        accountEventPublisher.publish(event);
 
         return AccountResponse.from(savedAccount);
     }

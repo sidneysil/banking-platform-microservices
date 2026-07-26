@@ -15,13 +15,12 @@
     </parent>
 
     <groupId>com.sidney.banking</groupId>
-    <artifactId>account-service</artifactId>
+    <artifactId>ledger-service</artifactId>
     <version>0.0.1-SNAPSHOT</version>
 
-    <name>account-service</name>
-
+    <name>ledger-service</name>
     <description>
-        Microsserviço responsável pelo gerenciamento de contas bancárias
+        Financial ledger service for the banking platform
     </description>
 
     <properties>
@@ -30,16 +29,10 @@
 
     <dependencies>
 
-        <!-- Web / API REST -->
+        <!-- API REST -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-webmvc</artifactId>
-        </dependency>
-
-        <!-- Validação -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
 
         <!-- Persistência JPA -->
@@ -48,10 +41,24 @@
             <artifactId>spring-boot-starter-data-jpa</artifactId>
         </dependency>
 
-        <!-- Segurança JWT / OAuth2 Resource Server -->
+        <!-- Validação -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-security-oauth2-resource-server</artifactId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+
+        <!-- Spring Security -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+
+        <!-- JWT / OAuth2 Resource Server -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>
+                spring-boot-starter-security-oauth2-resource-server
+            </artifactId>
         </dependency>
 
         <!-- Apache Kafka -->
@@ -60,19 +67,16 @@
             <artifactId>spring-boot-starter-kafka</artifactId>
         </dependency>
 
-        <!--
-            Necessário para o JsonSerializer do Kafka.
-
-            Corrige:
-            ClassNotFoundException:
-            com.fasterxml.jackson.databind.JavaType
-        -->
+        <!-- Jackson JSON -->
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
         </dependency>
 
-        <!-- Suporte aos tipos de data do Java -->
+        <!--
+            Suporte para OffsetDateTime, LocalDateTime,
+            LocalDate, Instant e outros tipos de data Java.
+        -->
         <dependency>
             <groupId>com.fasterxml.jackson.datatype</groupId>
             <artifactId>jackson-datatype-jsr310</artifactId>
@@ -88,6 +92,7 @@
         <dependency>
             <groupId>org.flywaydb</groupId>
             <artifactId>flyway-database-postgresql</artifactId>
+            <scope>runtime</scope>
         </dependency>
 
         <!-- PostgreSQL -->
@@ -103,54 +108,24 @@
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
 
-        <!-- Testes Web -->
+        <!-- Testes gerais -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-webmvc-test</artifactId>
-            <scope>test</scope>
-        </dependency>
-
-        <!-- Testes JPA -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-data-jpa-test</artifactId>
-            <scope>test</scope>
-        </dependency>
-
-        <!-- Testes de validação -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-validation-test</artifactId>
-            <scope>test</scope>
-        </dependency>
-
-        <!-- Testes de segurança -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>
-                spring-boot-starter-security-oauth2-resource-server-test
-            </artifactId>
-            <scope>test</scope>
-        </dependency>
-
-        <!-- Testes Flyway -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-flyway-test</artifactId>
-            <scope>test</scope>
-        </dependency>
-
-        <!-- Testes Actuator -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-actuator-test</artifactId>
+            <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
 
         <!-- Testes Kafka -->
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-kafka-test</artifactId>
+            <groupId>org.springframework.kafka</groupId>
+            <artifactId>spring-kafka-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- Testes de segurança -->
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-test</artifactId>
             <scope>test</scope>
         </dependency>
 

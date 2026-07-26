@@ -4,6 +4,3 @@ target/
 .vscode/
 .env
 *.log
-.classpath
-.project
-.settings/
