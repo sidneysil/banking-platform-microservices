@@ -1,99 +1,174 @@
 package com.sidney.banking.account.service;
 
-import java.util.List;
-import java.util.UUID;
-
+import com.sidney.banking.account.domain.Account;
+import com.sidney.banking.account.domain.AccountStatus;
+import com.sidney.banking.account.dto.ValidateTransactionRequest;
+import com.sidney.banking.account.dto.ValidateTransactionResponse;
+import com.sidney.banking.account.outbox.OutboxService;
+import com.sidney.banking.account.repository.AccountRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.sidney.banking.account.api.AccountResponse;
-import com.sidney.banking.account.api.CreateAccountRequest;
-import com.sidney.banking.account.domain.Account;
-import com.sidney.banking.account.event.AccountCreatedEvent;
-import com.sidney.banking.account.event.AccountEventPublisher;
-import com.sidney.banking.account.repository.AccountRepository;
+import java.math.BigDecimal;
+import java.util.UUID;
 
 @Service
 public class AccountService {
 
-    private static final String DEFAULT_AGENCY = "0001";
-
     private final AccountRepository accountRepository;
-    private final AccountNumberGenerator accountNumberGenerator;
-    private final AccountEventPublisher accountEventPublisher;
+    private final OutboxService outboxService;
 
     public AccountService(
             AccountRepository accountRepository,
-            AccountNumberGenerator accountNumberGenerator,
-            AccountEventPublisher accountEventPublisher
+            OutboxService outboxService
     ) {
         this.accountRepository = accountRepository;
-        this.accountNumberGenerator = accountNumberGenerator;
-        this.accountEventPublisher = accountEventPublisher;
+        this.outboxService = outboxService;
     }
 
     @Transactional
-    public AccountResponse create(
-            UUID customerId,
-            CreateAccountRequest request
+    public ValidateTransactionResponse executeTransfer(
+            ValidateTransactionRequest request
     ) {
+        validateRequest(request);
 
-        boolean accountAlreadyExists =
-                accountRepository.existsByCustomerIdAndType(
-                        customerId,
-                        request.type()
-                );
-
-        if (accountAlreadyExists) {
+        if (request.sourceAccountId().equals(request.destinationAccountId())) {
             throw new IllegalArgumentException(
-                    "O cliente já possui uma conta desse tipo."
+                    "A conta de origem não pode ser igual à conta de destino."
             );
         }
 
-        String accountNumber = generateUniqueAccountNumber();
-
-        Account account = new Account(
-                customerId,
-                DEFAULT_AGENCY,
-                accountNumber,
-                request.type()
+        UUID firstAccountId = getFirstAccountId(
+                request.sourceAccountId(),
+                request.destinationAccountId()
         );
 
-        Account savedAccount = accountRepository.save(account);
-
-        AccountCreatedEvent event = new AccountCreatedEvent(
-                UUID.randomUUID(),
-                savedAccount.getId(),
-                savedAccount.getCustomerId(),
-                savedAccount.getType().name(),
-                savedAccount.getCreatedAt()
+        UUID secondAccountId = getSecondAccountId(
+                request.sourceAccountId(),
+                request.destinationAccountId()
         );
 
-        accountEventPublisher.publish(event);
+        Account firstAccount = findAccountForUpdate(firstAccountId);
+        Account secondAccount = findAccountForUpdate(secondAccountId);
 
-        return AccountResponse.from(savedAccount);
+        Account sourceAccount = resolveAccount(
+                request.sourceAccountId(),
+                firstAccount,
+                secondAccount
+        );
+
+        Account destinationAccount = resolveAccount(
+                request.destinationAccountId(),
+                firstAccount,
+                secondAccount
+        );
+
+        validateAccountIsActive(sourceAccount, "origem");
+        validateAccountIsActive(destinationAccount, "destino");
+        validateAvailableBalance(sourceAccount, request.amount());
+
+        sourceAccount.debit(request.amount());
+        destinationAccount.credit(request.amount());
+
+        accountRepository.save(sourceAccount);
+        accountRepository.save(destinationAccount);
+        
+        outboxService.publishTransfer(
+                sourceAccount.getId(),
+                destinationAccount.getId(),
+                request.amount()
+        );
+
+        return new ValidateTransactionResponse(
+                true,
+                "Transferência processada com sucesso."
+        );
     }
 
-    @Transactional(readOnly = true)
-    public List<AccountResponse> findByCustomerId(UUID customerId) {
+    private void validateRequest(ValidateTransactionRequest request) {
+        if (request == null) {
+            throw new IllegalArgumentException(
+                    "Os dados da transferência são obrigatórios."
+            );
+        }
 
-        return accountRepository
-                .findByCustomerId(customerId)
-                .stream()
-                .map(AccountResponse::from)
-                .toList();
+        if (request.sourceAccountId() == null) {
+            throw new IllegalArgumentException(
+                    "A conta de origem é obrigatória."
+            );
+        }
+
+        if (request.destinationAccountId() == null) {
+            throw new IllegalArgumentException(
+                    "A conta de destino é obrigatória."
+            );
+        }
+
+        if (request.amount() == null
+                || request.amount().compareTo(BigDecimal.ZERO) <= 0) {
+
+            throw new IllegalArgumentException(
+                    "O valor da transferência deve ser maior que zero."
+            );
+        }
     }
 
-    private String generateUniqueAccountNumber() {
+    private Account findAccountForUpdate(UUID accountId) {
+        return accountRepository.findByIdForUpdate(accountId)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Conta não encontrada: " + accountId
+                ));
+    }
 
-        String accountNumber;
+    private void validateAccountIsActive(
+            Account account,
+            String accountRole
+    ) {
+        if (account.getStatus() != AccountStatus.ACTIVE) {
+            throw new IllegalArgumentException(
+                    "A conta de " + accountRole + " não está ativa."
+            );
+        }
+    }
 
-        do {
-            accountNumber = accountNumberGenerator.generate();
-        } while (
-                accountRepository.existsByAccountNumber(accountNumber)
-        );
+    private void validateAvailableBalance(
+            Account sourceAccount,
+            BigDecimal amount
+    ) {
+        if (sourceAccount.getBalance().compareTo(amount) < 0) {
+            throw new IllegalArgumentException(
+                    "Saldo insuficiente para realizar a transferência."
+            );
+        }
+    }
 
-        return accountNumber;
+    private Account resolveAccount(
+            UUID expectedAccountId,
+            Account firstAccount,
+            Account secondAccount
+    ) {
+        if (firstAccount.getId().equals(expectedAccountId)) {
+            return firstAccount;
+        }
+
+        return secondAccount;
+    }
+
+    private UUID getFirstAccountId(
+            UUID sourceAccountId,
+            UUID destinationAccountId
+    ) {
+        return sourceAccountId.compareTo(destinationAccountId) < 0
+                ? sourceAccountId
+                : destinationAccountId;
+    }
+
+    private UUID getSecondAccountId(
+            UUID sourceAccountId,
+            UUID destinationAccountId
+    ) {
+        return sourceAccountId.compareTo(destinationAccountId) < 0
+                ? destinationAccountId
+                : sourceAccountId;
     }
 }

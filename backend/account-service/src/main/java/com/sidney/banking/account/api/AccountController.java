@@ -1,21 +1,14 @@
 package com.sidney.banking.account.api;
 
-import java.net.URI;
-import java.util.List;
-import java.util.UUID;
-
+import com.sidney.banking.account.dto.ValidateTransactionRequest;
+import com.sidney.banking.account.dto.ValidateTransactionResponse;
+import com.sidney.banking.account.service.AccountService;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
-import com.sidney.banking.account.service.AccountService;
-
-import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/accounts")
@@ -27,38 +20,13 @@ public class AccountController {
         this.accountService = accountService;
     }
 
-    @PostMapping("/me")
-    public ResponseEntity<AccountResponse> create(
-
-            @AuthenticationPrincipal Jwt jwt,
-
-            @Valid
-            @RequestBody CreateAccountRequest request
-
+    @PostMapping("/internal/transfers")
+    public ResponseEntity<ValidateTransactionResponse> executeTransfer(
+            @Valid @RequestBody ValidateTransactionRequest request
     ) {
+        ValidateTransactionResponse response =
+                accountService.executeTransfer(request);
 
-        UUID customerId = UUID.fromString(jwt.getSubject());
-
-        AccountResponse response =
-                accountService.create(customerId, request);
-
-        return ResponseEntity
-                .created(URI.create("/api/accounts/me"))
-                .body(response);
+        return ResponseEntity.ok(response);
     }
-
-    @GetMapping("/me")
-    public ResponseEntity<List<AccountResponse>> list(
-
-            @AuthenticationPrincipal Jwt jwt
-
-    ) {
-
-        UUID customerId = UUID.fromString(jwt.getSubject());
-
-        return ResponseEntity.ok(
-                accountService.findByCustomerId(customerId)
-        );
-    }
-
 }

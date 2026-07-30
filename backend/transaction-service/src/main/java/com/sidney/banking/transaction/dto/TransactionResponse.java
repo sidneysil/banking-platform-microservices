@@ -9,7 +9,14 @@ import com.sidney.banking.transaction.domain.TransactionType;
 
 public record TransactionResponse(
 
-        UUID id,
+
+		UUID id,
+
+        String idempotencyKey,
+
+        TransactionType transactionType,
+
+        TransactionStatus transactionStatus,
 
         UUID sourceAccountId,
 
@@ -17,11 +24,14 @@ public record TransactionResponse(
 
         BigDecimal amount,
 
-        TransactionType transactionType,
+        String description,
 
-        TransactionStatus transactionStatus,
+        String failureReason,
 
-        OffsetDateTime createdAt
+        OffsetDateTime createdAt,
+
+        OffsetDateTime updatedAt
+
 
 ) {
 }

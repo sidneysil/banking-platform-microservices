@@ -102,5 +102,31 @@ public class Account {
     public OffsetDateTime getUpdatedAt() {
         return updatedAt;
     }
+    public void debit(BigDecimal amount) {
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException(
+                    "O valor do débito deve ser maior que zero."
+            );
+        }
 
+        if (balance.compareTo(amount) < 0) {
+            throw new IllegalArgumentException(
+                    "Saldo insuficiente para realizar o débito."
+            );
+        }
+
+        this.balance = this.balance.subtract(amount);
+        this.updatedAt = OffsetDateTime.now();
+    }
+
+    public void credit(BigDecimal amount) {
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException(
+                    "O valor do crédito deve ser maior que zero."
+            );
+        }
+
+        this.balance = this.balance.add(amount);
+        this.updatedAt = OffsetDateTime.now();
+    }
 }
