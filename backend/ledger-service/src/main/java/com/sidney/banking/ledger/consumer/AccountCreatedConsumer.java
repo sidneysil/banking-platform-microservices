@@ -19,13 +19,12 @@ public class AccountCreatedConsumer {
 
     @KafkaListener(
             topics = "${topics.account-created}",
-            groupId = "${spring.kafka.consumer.group-id}"
+            groupId = "${spring.kafka.consumer.group-id}",
+            properties = {
+                    "spring.json.value.default.type=com.sidney.banking.ledger.event.AccountCreatedEvent"
+            }
     )
-    public void consume(
-            AccountCreatedEvent event
-    ) {
-        ledgerService.createAccount(
-                event.accountId()
-        );
+    public void consume(AccountCreatedEvent event) {
+        ledgerService.createAccount(event.accountId());
     }
 }
