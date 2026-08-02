@@ -1,0 +1,23 @@
+filebeat.inputs:
+
+  - type: filestream
+    id: ledger-service
+    enabled: true
+
+    paths:
+      - /logs/ledger-service.json
+
+    parsers:
+      - ndjson:
+          target: ""
+          add_error_key: true
+
+output.elasticsearch:
+  hosts:
+    - "http://elasticsearch:9200"
+
+setup.kibana:
+  host: "http://kibana:5601"
+
+logging.level: info
+logging.to_files: false
