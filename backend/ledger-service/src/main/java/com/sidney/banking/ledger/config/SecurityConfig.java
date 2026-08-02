@@ -26,7 +26,9 @@ public class SecurityConfig {
                         auth
                                 .requestMatchers(
                                         "/actuator/health",
-                                        "/actuator/info"
+                                        "/actuator/info",
+                                        "/actuator/metrics",
+                                        "/actuator/prometheus"
                                 ).permitAll()
                                 .requestMatchers(
                                         "/api/ledger/**"
