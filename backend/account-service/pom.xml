@@ -67,64 +67,71 @@
             ClassNotFoundException:
             com.fasterxml.jackson.databind.JavaType
         -->
+        <!-- AWS MSK IAM Authentication -->
+		<dependency>
+			<groupId>software.amazon.msk</groupId>
+			<artifactId>aws-msk-iam-auth</artifactId>
+			<version>2.3.7</version>
+		</dependency>
+		
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
         </dependency>
 
-        <!-- Suporte aos tipos de data do Java -->
+		<!-- Suporte aos tipos de data do Java -->
         <dependency>
             <groupId>com.fasterxml.jackson.datatype</groupId>
             <artifactId>jackson-datatype-jsr310</artifactId>
         </dependency>
 
-        <!-- Flyway -->
+		<!-- Flyway -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-flyway</artifactId>
         </dependency>
 
-        <!-- Flyway PostgreSQL -->
+		<!-- Flyway PostgreSQL -->
         <dependency>
             <groupId>org.flywaydb</groupId>
             <artifactId>flyway-database-postgresql</artifactId>
         </dependency>
 
-        <!-- PostgreSQL -->
+		<!-- PostgreSQL -->
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
             <scope>runtime</scope>
         </dependency>
 
-        <!-- Monitoramento -->
+		<!-- Monitoramento -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
 
-        <!-- Testes Web -->
+		<!-- Testes Web -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-webmvc-test</artifactId>
             <scope>test</scope>
         </dependency>
 
-        <!-- Testes JPA -->
+		<!-- Testes JPA -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-jpa-test</artifactId>
             <scope>test</scope>
         </dependency>
 
-        <!-- Testes de validação -->
+		<!-- Testes de validação -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-validation-test</artifactId>
             <scope>test</scope>
         </dependency>
 
-        <!-- Testes de segurança -->
+		<!-- Testes de segurança -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>
@@ -133,34 +140,34 @@
             <scope>test</scope>
         </dependency>
 
-        <!-- Testes Flyway -->
+		<!-- Testes Flyway -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-flyway-test</artifactId>
             <scope>test</scope>
         </dependency>
 
-        <!-- Testes Actuator -->
+		<!-- Testes Actuator -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator-test</artifactId>
             <scope>test</scope>
         </dependency>
 
-        <!-- Testes Kafka -->
+		<!-- Testes Kafka -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-kafka-test</artifactId>
             <scope>test</scope>
         </dependency>
-        
-    <!-- Redis -->
+
+		<!-- Redis -->
 <dependency>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-data-redis</artifactId>
 </dependency>
 
-<!-- Spring Cache -->
+		<!-- Spring Cache -->
 <dependency>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-cache</artifactId>
