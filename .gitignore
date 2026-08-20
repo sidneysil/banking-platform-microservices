@@ -4,3 +4,8 @@ target/
 .vscode/
 .env
 *.log
+
+# Eclipse / STS
+.classpath
+.project
+.settings/
