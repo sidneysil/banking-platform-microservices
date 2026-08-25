@@ -80,7 +80,7 @@ jobs:
       - name: Atualizar imagem do Account Service
         shell: powershell
         run: |
-          kubectl set image deployment/account-service account-service=${{ secrets.DOCKERHUB_USERNAME }}/banking-account-service:latest
+          kubectl set image deployment/account-service account-service=${{ secrets.DOCKERHUB_USERNAME }}/banking-account-service:${{ github.sha }}
 
       - name: Aguardar rollout
         shell: powershell
