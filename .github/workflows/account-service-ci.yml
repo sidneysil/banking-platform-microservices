@@ -12,6 +12,26 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: account_db
+          POSTGRES_USER: banking
+          POSTGRES_PASSWORD: banking
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U banking -d account_db"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    env:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/account_db
+      SPRING_DATASOURCE_USERNAME: banking
+      SPRING_DATASOURCE_PASSWORD: banking
+
     steps:
 
       - name: Baixar codigo do repositorio
