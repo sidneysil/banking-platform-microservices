@@ -68,3 +68,26 @@ jobs:
         run: |
           docker push ${{ secrets.DOCKERHUB_USERNAME }}/banking-account-service:${{ github.sha }}
           docker push ${{ secrets.DOCKERHUB_USERNAME }}/banking-account-service:latest
+
+  deploy:
+    needs: build
+    runs-on: self-hosted
+
+    steps:
+      - name: Baixar codigo do repositorio
+        uses: actions/checkout@v4
+
+      - name: Atualizar imagem do Account Service
+        shell: powershell
+        run: |
+          kubectl set image deployment/account-service account-service=${{ secrets.DOCKERHUB_USERNAME }}/banking-account-service:latest
+
+      - name: Aguardar rollout
+        shell: powershell
+        run: |
+          kubectl rollout status deployment/account-service --timeout=120s
+
+      - name: Verificar pods
+        shell: powershell
+        run: |
+          kubectl get pods
