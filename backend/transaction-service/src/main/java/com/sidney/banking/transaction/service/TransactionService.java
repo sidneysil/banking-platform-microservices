@@ -7,6 +7,8 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.sidney.banking.transaction.client.AccountClient;
+import com.sidney.banking.transaction.client.AccountTransferResponse;
 import com.sidney.banking.transaction.domain.BankTransaction;
 import com.sidney.banking.transaction.domain.TransactionStatus;
 import com.sidney.banking.transaction.domain.TransactionType;
@@ -18,9 +20,14 @@ import com.sidney.banking.transaction.repository.TransactionRepository;
 public class TransactionService {
 
     private final TransactionRepository repository;
+    private final AccountClient accountClient;
 
-    public TransactionService(TransactionRepository repository) {
+    public TransactionService(
+            TransactionRepository repository,
+            AccountClient accountClient) {
+
         this.repository = repository;
+        this.accountClient = accountClient;
     }
 
     @Transactional
@@ -28,8 +35,11 @@ public class TransactionService {
 
         validateRequest(request);
 
+        String idempotencyKey =
+                request.idempotencyKey().trim();
+
         BankTransaction existingTransaction = repository
-                .findByIdempotencyKey(request.idempotencyKey())
+                .findByIdempotencyKey(idempotencyKey)
                 .orElse(null);
 
         if (existingTransaction != null) {
@@ -38,26 +48,98 @@ public class TransactionService {
 
         OffsetDateTime now = OffsetDateTime.now();
 
-        BankTransaction transaction = new BankTransaction();
+        BankTransaction transaction =
+                new BankTransaction();
 
         transaction.setId(UUID.randomUUID());
-        transaction.setIdempotencyKey(request.idempotencyKey().trim());
-        transaction.setTransactionType(request.transactionType());
-        transaction.setTransactionStatus(TransactionStatus.PENDING);
-        transaction.setSourceAccountId(request.sourceAccountId());
-        transaction.setDestinationAccountId(request.destinationAccountId());
-        transaction.setAmount(request.amount());
-        transaction.setDescription(normalizeDescription(request.description()));
+        transaction.setIdempotencyKey(idempotencyKey);
+        transaction.setTransactionType(
+                request.transactionType());
+        transaction.setTransactionStatus(
+                TransactionStatus.PENDING);
+        transaction.setSourceAccountId(
+                request.sourceAccountId());
+        transaction.setDestinationAccountId(
+                request.destinationAccountId());
+        transaction.setAmount(
+                request.amount());
+        transaction.setDescription(
+                normalizeDescription(
+                        request.description()));
         transaction.setFailureReason(null);
         transaction.setCreatedAt(now);
         transaction.setUpdatedAt(now);
 
-        BankTransaction savedTransaction = repository.save(transaction);
+        BankTransaction savedTransaction =
+                repository.save(transaction);
+
+        if (request.transactionType()
+                == TransactionType.PIX) {
+
+            return processPix(savedTransaction);
+        }
 
         return toResponse(savedTransaction);
     }
 
-    private void validateRequest(CreateTransactionRequest request) {
+    private TransactionResponse processPix(
+            BankTransaction transaction) {
+
+        transaction.setTransactionStatus(
+                TransactionStatus.PROCESSING);
+
+        transaction.setUpdatedAt(
+                OffsetDateTime.now());
+
+        repository.save(transaction);
+
+        try {
+
+            AccountTransferResponse response =
+                    accountClient.executeTransfer(
+                            transaction.getSourceAccountId(),
+                            transaction.getDestinationAccountId(),
+                            transaction.getAmount());
+
+            if (response != null
+                    && response.success()) {
+
+                transaction.setTransactionStatus(
+                        TransactionStatus.COMPLETED);
+
+                transaction.setFailureReason(null);
+
+            } else {
+
+                transaction.setTransactionStatus(
+                        TransactionStatus.FAILED);
+
+                transaction.setFailureReason(
+                        response != null
+                                ? response.message()
+                                : "Falha ao processar o PIX.");
+            }
+
+        } catch (Exception exception) {
+
+            transaction.setTransactionStatus(
+                    TransactionStatus.FAILED);
+
+            transaction.setFailureReason(
+                    "Falha ao comunicar com o Account Service.");
+        }
+
+        transaction.setUpdatedAt(
+                OffsetDateTime.now());
+
+        BankTransaction updatedTransaction =
+                repository.save(transaction);
+
+        return toResponse(updatedTransaction);
+    }
+
+    private void validateRequest(
+            CreateTransactionRequest request) {
 
         if (request == null) {
             throw new IllegalArgumentException(
@@ -86,7 +168,9 @@ public class TransactionService {
                     "O valor da transação é obrigatório.");
         }
 
-        if (request.amount().compareTo(BigDecimal.ZERO) <= 0) {
+        if (request.amount()
+                .compareTo(BigDecimal.ZERO) <= 0) {
+
             throw new IllegalArgumentException(
                     "O valor da transação deve ser maior que zero.");
         }
@@ -94,13 +178,16 @@ public class TransactionService {
         validateAccounts(request);
     }
 
-    private void validateAccounts(CreateTransactionRequest request) {
+    private void validateAccounts(
+            CreateTransactionRequest request) {
 
-        TransactionType transactionType = request.transactionType();
+        TransactionType transactionType =
+                request.transactionType();
 
         switch (transactionType) {
 
             case CREDIT -> {
+
                 if (request.destinationAccountId() == null) {
                     throw new IllegalArgumentException(
                             "A conta de destino é obrigatória para crédito.");
@@ -108,6 +195,7 @@ public class TransactionService {
             }
 
             case DEBIT -> {
+
                 if (request.sourceAccountId() == null) {
                     throw new IllegalArgumentException(
                             "A conta de origem é obrigatória para débito.");
@@ -115,6 +203,7 @@ public class TransactionService {
             }
 
             case TRANSFER, PIX -> {
+
                 if (request.sourceAccountId() == null) {
                     throw new IllegalArgumentException(
                             "A conta de origem é obrigatória.");
@@ -126,7 +215,8 @@ public class TransactionService {
                 }
 
                 if (request.sourceAccountId()
-                        .equals(request.destinationAccountId())) {
+                        .equals(
+                                request.destinationAccountId())) {
 
                     throw new IllegalArgumentException(
                             "A conta de origem e a conta de destino devem ser diferentes.");
@@ -135,13 +225,17 @@ public class TransactionService {
         }
     }
 
-    private String normalizeDescription(String description) {
+    private String normalizeDescription(
+            String description) {
 
-        if (description == null || description.isBlank()) {
+        if (description == null
+                || description.isBlank()) {
+
             return null;
         }
 
-        String normalizedDescription = description.trim();
+        String normalizedDescription =
+                description.trim();
 
         if (normalizedDescription.length() > 255) {
             throw new IllegalArgumentException(
