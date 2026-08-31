@@ -4,6 +4,10 @@ import java.math.BigDecimal;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
@@ -12,7 +16,7 @@ public class RestAccountClient implements AccountClient {
 
     private final RestClient restClient;
 
-    public RestAccountClient(          
+    public RestAccountClient(
             @Value("${clients.account-service.base-url}")
             String accountServiceBaseUrl) {
 
@@ -21,7 +25,7 @@ public class RestAccountClient implements AccountClient {
                 .build();
     }
 
-   @Override
+    @Override
     public AccountTransferResponse executeTransfer(
             UUID sourceAccountId,
             UUID destinationAccountId,
@@ -34,11 +38,32 @@ public class RestAccountClient implements AccountClient {
                         amount
                 );
 
+        String token = getCurrentJwt();
+
         return restClient
                 .post()
                 .uri("/api/accounts/internal/transfers")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                 .body(request)
                 .retrieve()
                 .body(AccountTransferResponse.class);
+    }
+
+    private String getCurrentJwt() {
+
+        Authentication authentication =
+                SecurityContextHolder
+                        .getContext()
+                        .getAuthentication();
+
+        if (!(authentication instanceof JwtAuthenticationToken jwtAuthentication)) {
+            throw new IllegalStateException(
+                    "JWT não encontrado no contexto de segurança."
+            );
+        }
+
+        return jwtAuthentication
+                .getToken()
+                .getTokenValue();
     }
 }
